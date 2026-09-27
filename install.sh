@@ -2,34 +2,15 @@
 
 set -uo pipefail
 
-# 43PR/dotfiles installer
+# Samuel-Mencke/dotfiles installer
+# Based on 43PR/dotfiles
 # Arch-compatible Linux + Hyprland
-#
-# Usage:
-#   ./install.sh
-#
-# This script:
-#   1. Verifies that the system is Arch-based
-#   2. Detects the available package manager(s)
-#   3. Splits packages.txt into "official repo" vs "AUR-only" and
-#      installs each with the right tool, so a single AUR-only or
-#      unresolvable name never aborts the whole install
-#   4. Backs up existing ~/.config
-#   5. Installs this repository's configuration
-#
-# Supported package managers:
-#   - pacman       (official repos: Arch, Manjaro, EndeavourOS, CachyOS, etc.)
-#   - paru / yay   (AUR helpers, optional but recommended)
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$HOME/.config"
 BACKUP_ROOT="$HOME/.config-backups"
 TIMESTAMP="$(date '+%Y-%m-%d_%H-%M-%S')"
 BACKUP_DIR="$BACKUP_ROOT/$TIMESTAMP"
-
-# --------------------------------------------------
-# Colors / output
-# --------------------------------------------------
 
 info() {
     printf '\n\033[1;34m[INFO]\033[0m %s\n' "$1"
@@ -64,8 +45,6 @@ fi
 # shellcheck disable=SC1091
 source /etc/os-release
 
-# Arch-compatible distributions normally identify themselves
-# through ID_LIKE=arch or ID=arch.
 if [[ "${ID:-}" != "arch" && "${ID_LIKE:-}" != *arch* ]]; then
     error "This installer is intended for Arch-compatible Linux distributions."
     error "Detected: ${PRETTY_NAME:-unknown}"
@@ -78,20 +57,19 @@ if ! command -v sudo >/dev/null 2>&1; then
 fi
 
 if ! command -v pacman >/dev/null 2>&1; then
-    error "pacman was not found. This installer requires an Arch-based system."
+    error "pacman was not found."
+    exit 1
+fi
+
+PACKAGE_FILE="$REPO_DIR/packages.txt"
+if [[ ! -f "$PACKAGE_FILE" ]]; then
+    error "packages.txt not found."
     exit 1
 fi
 
 # --------------------------------------------------
 # Package manager detection
 # --------------------------------------------------
-
-PACKAGE_FILE="$REPO_DIR/packages.txt"
-
-if [[ ! -f "$PACKAGE_FILE" ]]; then
-    error "packages.txt not found."
-    exit 1
-fi
 
 AUR_HELPER=""
 if command -v paru >/dev/null 2>&1; then
@@ -109,31 +87,24 @@ else
 
     if sudo pacman -S --needed --noconfirm git base-devel; then
         YAY_BUILD_DIR="$(mktemp -d)"
-
         if git clone https://aur.archlinux.org/yay.git "$YAY_BUILD_DIR/yay" \
             && (cd "$YAY_BUILD_DIR/yay" && makepkg -si --noconfirm); then
             AUR_HELPER="yay"
             success "yay installed."
         else
             warning "Failed to build/install yay automatically."
-            warning "You can install one manually (paru or yay) and re-run this script."
         fi
-
         rm -rf "$YAY_BUILD_DIR"
     else
-        warning "Failed to install git/base-devel; cannot bootstrap an AUR helper."
-        warning "AUR-only packages will be listed but skipped."
+        warning "Failed to install git/base-devel; AUR-only packages will be skipped."
     fi
 fi
 
 # --------------------------------------------------
-# Packages: split into official-repo vs AUR-only
+# Packages
 # --------------------------------------------------
 
-mapfile -t PACKAGES < <(
-    grep -vE '^[[:space:]]*(#|$)' "$PACKAGE_FILE"
-)
-
+mapfile -t PACKAGES < <(grep -vE '^[[:space:]]*(#|$)' "$PACKAGE_FILE")
 OFFICIAL_PACKAGES=()
 AUR_PACKAGES=()
 UNKNOWN_PACKAGES=()
@@ -141,7 +112,7 @@ UNKNOWN_PACKAGES=()
 if [[ "${#PACKAGES[@]}" -eq 0 ]]; then
     warning "packages.txt does not contain any packages."
 else
-    info "Resolving packages against official repos..."
+    info "Resolving packages..."
 
     for pkg in "${PACKAGES[@]}"; do
         if pacman -Si "$pkg" >/dev/null 2>&1; then
@@ -158,91 +129,93 @@ else
         if sudo pacman -Syu --needed --noconfirm "${OFFICIAL_PACKAGES[@]}"; then
             success "Official-repo packages installed."
         else
-            warning "pacman reported an error installing one or more official-repo packages. Continuing anyway."
+            warning "pacman reported an error. Continuing so the backup/install can still complete."
         fi
     fi
 
-    if [[ "${#AUR_PACKAGES[@]}" -gt 0 ]]; then
-        if [[ -n "$AUR_HELPER" ]]; then
-            info "Installing AUR packages with $AUR_HELPER: ${AUR_PACKAGES[*]}"
-            if "$AUR_HELPER" -S --needed --noconfirm "${AUR_PACKAGES[@]}"; then
-                success "AUR packages installed."
-            else
-                warning "$AUR_HELPER reported an error installing one or more AUR packages. Continuing anyway."
-            fi
+    if [[ "${#AUR_PACKAGES[@]}" -gt 0 && -n "$AUR_HELPER" ]]; then
+        info "Installing AUR packages with $AUR_HELPER..."
+        if "$AUR_HELPER" -S --needed --noconfirm "${AUR_PACKAGES[@]}"; then
+            success "AUR packages installed."
+        else
+            warning "$AUR_HELPER reported an error. Continuing."
         fi
     fi
 
     if [[ "${#UNKNOWN_PACKAGES[@]}" -gt 0 ]]; then
-        warning "Could not resolve the following package(s) in any repo: ${UNKNOWN_PACKAGES[*]}"
-        warning "Check the name with 'pacman -Ss <name>' or https://aur.archlinux.org, then fix packages.txt."
+        warning "Unresolved packages: ${UNKNOWN_PACKAGES[*]}"
     fi
 fi
 
 # --------------------------------------------------
-# Default shell
+# Login shell
 # --------------------------------------------------
 
-if [[ -x /bin/zsh ]]; then
-    if [[ "$SHELL" != "/bin/zsh" ]]; then
-        info "Setting Zsh as the default shell..."
-
-        if chsh -s /bin/zsh; then
-            success "Default shell changed to Zsh."
-            warning "Log out and back in for the shell change to take effect."
-        else
-            warning "Failed to change the default shell to Zsh."
-        fi
-    else
-        info "Zsh is already the default shell."
-    fi
-else
-    warning "Zsh is not installed; skipping default shell configuration."
-fi
+info "Preserving current login shell: ${SHELL:-unknown}"
 
 # --------------------------------------------------
 # Backup existing configuration
 # --------------------------------------------------
 
-if [[ -d "$CONFIG_DIR" ]]; then
-    info "Backing up existing ~/.config..."
+mkdir -p "$CONFIG_DIR" "$BACKUP_DIR"
+info "Backing up config paths that this repo will replace..."
 
-    mkdir -p "$BACKUP_DIR"
+for item in "$REPO_DIR/.config/"*; do
+    [[ -e "$item" ]] || continue
+    name="$(basename "$item")"
+    target="$CONFIG_DIR/$name"
 
-    # Only back up directories/files that this repository
-    # is going to replace.
-    for item in "$REPO_DIR/.config/"*; do
-        [[ -e "$item" ]] || continue
-
-        name="$(basename "$item")"
-
-        if [[ -e "$CONFIG_DIR/$name" ]]; then
-            cp -a "$CONFIG_DIR/$name" "$BACKUP_DIR/"
+    if [[ -e "$target" || -L "$target" ]]; then
+        if [[ -L "$target" ]]; then
+            # Preserve the actual linked contents so rollback does not depend on
+            # the original symlink target still existing.
+            cp -aL "$target" "$BACKUP_DIR/$name"
+        else
+            cp -a "$target" "$BACKUP_DIR/"
         fi
-    done
 
-    success "Existing configuration backed up to:"
-    printf '  %s\n' "$BACKUP_DIR"
-else
-    mkdir -p "$CONFIG_DIR"
+        # Remove the old path before copying. This prevents cp from following an
+        # existing symlink and modifying an external config tree such as ML4W.
+        rm -rf -- "$target"
+    fi
+done
+
+if [[ -e "$HOME/.zshrc" || -L "$HOME/.zshrc" ]]; then
+    if [[ -L "$HOME/.zshrc" ]]; then
+        cp -aL "$HOME/.zshrc" "$BACKUP_DIR/.zshrc"
+    else
+        cp -a "$HOME/.zshrc" "$BACKUP_DIR/.zshrc"
+    fi
 fi
+
+success "Backup created: $BACKUP_DIR"
 
 # --------------------------------------------------
 # Install dotfiles
 # --------------------------------------------------
 
 info "Installing dotfiles..."
-
-# Install ~/.config files
 cp -a "$REPO_DIR/.config/." "$CONFIG_DIR/"
 
-# Install ~/.zshrc
 if [[ -f "$REPO_DIR/.config/.zshrc" ]]; then
     cp "$REPO_DIR/.config/.zshrc" "$HOME/.zshrc"
-    success "Installed .zshrc."
-else
-    warning ".zshrc not found; skipping."
 fi
+
+# Make bundled shell scripts executable.
+find "$CONFIG_DIR" -type f -name "*.sh" -exec chmod +x {} \;
+
+# Replace upstream/personal development home paths with the account currently
+# running the installer, keeping the repository usable on another machine/user.
+for cfg in \
+    "$HOME/.config/wlogout/style.css" \
+    "$HOME/.config/spicetify/config-xpui.ini"; do
+    if [[ -f "$cfg" ]]; then
+        sed -i \
+            -e "s#/home/rp34#/home/$USER#g" \
+            -e "s#/home/samuelm#/home/$USER#g" \
+            "$cfg"
+    fi
+done
 
 success "Dotfiles installed."
 
@@ -252,15 +225,12 @@ success "Dotfiles installed."
 
 if [[ -n "$AUR_HELPER" ]]; then
     info "Installing Papirus folders..."
-
-    if "$AUR_HELPER" -S --needed --noconfirm papirus-folders; then
-        if papirus-folders -C white; then
-            success "Papirus folders set to white."
-        else
-            warning "papirus-folders was installed, but setting the folder color failed."
-        fi
+    if "$AUR_HELPER" -S --needed --noconfirm papirus-folders \
+        && command -v papirus-folders >/dev/null 2>&1 \
+        && papirus-folders -C white; then
+        success "Papirus folders set to white."
     else
-        warning "Failed to install papirus-folders."
+        warning "Papirus folder setup failed; continuing."
     fi
 else
     warning "No AUR helper available; skipping papirus-folders."
@@ -272,48 +242,25 @@ fi
 
 if [[ -d "$REPO_DIR/Wallpapers" ]]; then
     info "Installing wallpapers..."
-
     mkdir -p "$HOME/Pictures/Wallpapers"
     cp -a "$REPO_DIR/Wallpapers/." "$HOME/Pictures/Wallpapers/"
-
     success "Wallpapers installed."
 fi
 
 # --------------------------------------------------
-# Enable user audio services
+# User audio services
 # --------------------------------------------------
 
 if command -v systemctl >/dev/null 2>&1; then
-    info "Enabling PipeWire..."
-
-    systemctl --user enable --now pipewire.service
-    systemctl --user enable --now pipewire-pulse.service
-    systemctl --user enable --now wireplumber.service
-
-    success "PipeWire configured."
-else
-    warning "systemctl was not found; skipping PipeWire service setup."
+    info "Enabling PipeWire user services..."
+    if systemctl --user enable --now pipewire.service \
+        && systemctl --user enable --now pipewire-pulse.service \
+        && systemctl --user enable --now wireplumber.service; then
+        success "PipeWire configured."
+    else
+        warning "One or more PipeWire user services could not be enabled."
+    fi
 fi
-
-# --------------------------------------------------
-# Permissions
-# --------------------------------------------------
-
-info "Setting executable permissions on shell scripts..."
-
-find "$CONFIG_DIR" \
-    -type f \
-    -name "*.sh" \
-    -exec chmod +x {} \;
-
-success "Shell script permissions configured."
-
-# --------------------------------------------------
-# Config Update (Set to current user)
-# --------------------------------------------------
-
-info "Updating Config..."
-sed -i "s/rp34/$USER/g" "$HOME/.config/wlogout/style.css"
 
 # --------------------------------------------------
 # Finish
@@ -321,29 +268,18 @@ sed -i "s/rp34/$USER/g" "$HOME/.config/wlogout/style.css"
 
 printf '\n'
 printf '\033[1;32m========================================\033[0m\n'
-printf '\033[1;32m       43PR Hyprland Setup Ready       \033[0m\n'
+printf '\033[1;32m      Samuel Hyprland Setup Ready      \033[0m\n'
 printf '\033[1;32m========================================\033[0m\n'
 printf '\n'
-
 printf 'Distribution:  %s\n' "${PRETTY_NAME:-unknown}"
 printf 'AUR helper:    %s\n' "${AUR_HELPER:-none}"
 printf 'Configuration: %s\n' "$CONFIG_DIR"
-
-if [[ -d "$BACKUP_DIR" ]]; then
-    printf 'Backup:        %s\n' "$BACKUP_DIR"
-fi
+printf 'Backup:        %s\n' "$BACKUP_DIR"
 
 if [[ "${#UNKNOWN_PACKAGES[@]}" -gt 0 ]]; then
-    printf '\n'
-    warning "Unresolved packages (install manually): ${UNKNOWN_PACKAGES[*]}"
+    printf 'Unresolved:    %s\n' "${UNKNOWN_PACKAGES[*]}"
 fi
 
 printf '\n'
-warning "Log out and back into Hyprland for the changes to fully take effect."
-
-printf '\n'
-info "You can start Hyprland with:"
-printf '  Hyprland\n'
-
-printf '\n'
-success "Installation complete!"
+warning "Log out and back into Hyprland for all changes to take effect."
+success "Installation complete."
