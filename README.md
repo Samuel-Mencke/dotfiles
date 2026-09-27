@@ -1,57 +1,50 @@
 <div align="center">
 
-## Hyprland Setup by 43pr メ
+## Samuel’s Hyprland Setup
 
-### <a href="https://www.youtube.com/@43PR2">▷ YouTube Guides & Showcase</a>
+Personal Hyprland/CachyOS setup based on [43PR/dotfiles](https://github.com/43PR/dotfiles), with Samuel-specific defaults and a safer installer for existing configurations.
 
-Simple Hyprland setup focused on practical keybinds, productivity and easy to customize. Feel free to use as inspiration or as a starting point for building your own setup.
+### Upstream
 
-### [Recent Updates & Troubleshooting](updates.md)
+Original setup, screenshots, guides and support: [43PR/dotfiles](https://github.com/43PR/dotfiles)
 
-### Join Discord Server 
-
-New discrod server for help, discussions, showcases, tips/ideas
-
-[![Discord](https://img.shields.io/badge/Discord-Join%20the%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/ajaRkHt8u)
-
-### **[Features](#features)  -  [Keybinds](#most-used-keybinds)  -  [Installation](#installation)  -  [Support](#support)**
+### **[Features](#features)  -  [Keybinds](#most-used-keybinds)  -  [Installation](#installation)**
 
 </div>
-
-https://github.com/user-attachments/assets/c332e894-b357-44db-aa38-a4b0bdd1e2cc
 
 ![](Wallpapers/Showcase/9.png)
 ![](Wallpapers/Showcase/hover-areas.png)
 ![](Wallpapers/Showcase/4.png)
 ![](Wallpapers/Showcase/2.png)
 
-Wallpapers: https://wallhaven.cc/user/43pr
+## Personal defaults
+
+* Chromium as browser
+* German keyboard layout
+* Mouse sensitivity `0`
+* Natural scrolling enabled on the touchpad
+* Hardware-neutral Waybar GPU tooltip
+* User paths adapted for `samuelm`
+* Installer preserves the current login shell instead of forcing Zsh
+* Existing symlinked configs are fully backed up and replaced safely instead of writing through the symlink target
 
 ## Features
 
-* **Waybar** > Change volume with mouse wheel, mute, play/pause, next and blue light filter
-* **Custom settings menu** > System info, Network, Bluetooth, Monitors, Sound: switch output, per app volume
-* **Custom wallpaper selector** > (Awww + Quickshell)
-* **App launcher (Rofi)** > App search/open, clipboard history and switch opacity
-* **Zsh shell + starship** > (Customizable command-line shell)
-* **Spotify + Spicetify Theme:** > text by darkthemer (edited)
+* **Waybar** > volume controls, media controls, network, CPU/RAM/GPU and workspaces
+* **Custom settings menu** > System info, Network, Bluetooth, Monitors and Sound
+* **Custom wallpaper selector** > Awww + Quickshell
+* **App launcher** > Rofi
+* **Shell config + Starship** > installer keeps the existing login shell
+* **Spotify + Spicetify theme**
 * **Custom monochrome theme**
-* **Custom scripts** 
-* **Hyprlock** > (Lock screen)
-* **Wlogout** > (Logout menu)
+* **Hyprlock**
+* **Wlogout**
 * **Terminal:** Kitty
 * **File manager:** Thunar
-* **Editor:** Xed, VSCodium
-  
+
 > All programs: [packages.txt](packages.txt)
 
-### Wallpaper Selector
-
-Just made some tweaks to it. Give it some love: [hyprquickpaper](https://github.com/iamsurjog/hyprquickpaper)
-
 ## Most used keybinds
-
-> **You can modify the keybinds using HyprMod**
 
 | Keybind                 | Action                    |
 | -----------             | ------------------------- |
@@ -68,62 +61,40 @@ Just made some tweaks to it. Give it some love: [hyprquickpaper](https://github.
 | `Super + V`             | Clipboard history         |
 | `Super + F`             | Toggle fullscreen         |
 | `Super + Space`         | Toggle floating window    |
-| `Super + Shift + W`     | Toggle waybar             |
+| `Super + Shift + W`     | Toggle Waybar             |
 | `Super + Tab`           | Lock screen               |
 | `Super + Grave`         | Logout menu               |
 | `Delete`                | Screenshot fullscreen     |
-| `SHIFT + Delete`        | Screenshot area select    |
+| `Shift + Delete`        | Screenshot area           |
 | `Super + Mouse wheel`   | Zoom in/out               |
-
-> To close wlogout, wallpaper picker, setting menu just click outside or Esc key. Toggle (same keybind to open/close) for app launcher and waybar
 
 > All keybinds: [.config/hypr/keybinds.lua](.config/hypr/keybinds.lua)
 
----
-## Installation 
+## Installation
 
-**READ ALL**
+Target: Arch-compatible Linux such as CachyOS, Arch, EndeavourOS or Manjaro.
 
-Should work for Arch, Manjaro, EndeavourOS, CachyOS, etc. Let me know if there's any issues
-
-This is mainly intended for a clean installation. If you already have a desktop configuration I recommend to implement manually.
-
-Existing configuration files that are being replaced will be backed up automatically.
-
-**First install git then use the next command and continue the installation until it's finished:**
+The installer backs up every config path it replaces into `~/.config-backups/<timestamp>/`. Symlinked config directories are dereferenced into the backup first, so external trees such as ML4W are not modified accidentally.
 
 ```bash
-
-sudo pacman -S git   
-```
-```bash
-
-git clone https://github.com/43PR/dotfiles.git
+sudo pacman -S git
+git clone https://github.com/Samuel-Mencke/dotfiles.git
 cd dotfiles
 chmod +x install.sh
 ./install.sh
 ```
 
-After the installation finishes log out and back in.
+After installation, log out and back into Hyprland.
 
-> [!note]
-> Change the GTK theme to dark if it wasn't changed automatically.
-> 
-> Waybar custom-gpu is specific to my PC so you can remove it or implement.
+> [!NOTE]
+> The current login shell is preserved.
 >
-> Any issues with the wallpaper picker just delete cache pictures ".cache/quickshell/thumbs/"
+> Waybar GPU usage uses `nvtop` and `jq`.
 >
-> Edit default programs in "config/hypr/hyprland.lua".
+> If the wallpaper picker cache causes problems, remove `~/.cache/quickshell/thumbs/`.
+>
+> Default programs and input settings are in `.config/hypr/hyprland.lua`.
 
-<div align="center">
+## Credits
 
-## Support
-
-<a href="https://ko-fi.com/43pr2"><strong>☕ 𝙆𝙤-𝙛𝙞</strong></a>
-  ─  
- <a href="https://www.youtube.com/@43PR2"><strong>▷ 𝙔𝙤𝙪𝙏𝙪𝙗𝙚</strong></a>
-
-</div>
-
-
-
+Based on [43PR/dotfiles](https://github.com/43PR/dotfiles). The upstream repository contains the original design, assets, guides and support links.
