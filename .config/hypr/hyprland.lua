@@ -7,7 +7,7 @@ mainMod    = "SUPER"
 terminal   = "kitty"
 menu       = "rofi -show drun"
 fileManager = "thunar"
-browser    = "brave"
+browser    = "chromium"
 
 ---- AUTOSTART ----
 
@@ -33,11 +33,11 @@ hl.env("MOZ_ENABLE_WAYLAND", "1")
 
 hl.config({
     input = {
-        kb_layout = "us,latam",
+        kb_layout = "de",
         follow_mouse = 1,
-        sensitivity = 0.5,
+        sensitivity = 0,
         touchpad = {
-            natural_scroll = false,
+            natural_scroll = true,
             tap_to_click = true,
         },
     },
