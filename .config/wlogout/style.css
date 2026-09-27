@@ -66,21 +66,21 @@ button:focus:not(:hover) {
 }
 
 #shutdown {
-    background-image: url("/home/rp34/.config/wlogout/icons/shutdown.png");
+    background-image: url("/home/samuelm/.config/wlogout/icons/shutdown.png");
 }
 
 #reboot {
-    background-image: url("/home/rp34/.config/wlogout/icons/reboot.png");
+    background-image: url("/home/samuelm/.config/wlogout/icons/reboot.png");
 }
 
 #logout {
-    background-image: url("/home/rp34/.config/wlogout/icons/logout.png");
+    background-image: url("/home/samuelm/.config/wlogout/icons/logout.png");
 }
 
 #suspend {
-    background-image: url("/home/rp34/.config/wlogout/icons/suspend.png");
+    background-image: url("/home/samuelm/.config/wlogout/icons/suspend.png");
 }
 
 #hibernate {
-    background-image: url("/home/rp34/.config/wlogout/icons/hibernate.png");
+    background-image: url("/home/samuelm/.config/wlogout/icons/hibernate.png");
 }
