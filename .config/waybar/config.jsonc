@@ -24,7 +24,7 @@
         "format": "GPU {}%",
         "interval": 1,
         "tooltip": true,
-        "tooltip-format": "Skylake-H GT2: {}%"
+        "tooltip-format": "GPU: {}%"
     },
     
     // "temperature": {
